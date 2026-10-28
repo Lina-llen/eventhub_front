@@ -1,0 +1,8 @@
+.login-page {
+  min-height: calc(100vh - 60px);
+  background: transparent;
+}
+
+.login-card {
+  max-width: 28rem;
+}
