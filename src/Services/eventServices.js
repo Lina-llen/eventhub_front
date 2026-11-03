@@ -9,7 +9,7 @@ function getAll() {
 }
 
 function getById(id) {
-    return axios.get("http://127.0.0.1:3000/event" + id, {
+    return axios.get("http://127.0.0.1:3000/event/" + id, {
         headers: {
             Authorization: "Bearer " + window.localStorage.getItem("token")
         }
