@@ -6,7 +6,6 @@ import LoginPage from './Pages/LoginPage'
 import RegisterPage from './Pages/RegisterPage'
 import EventsPage from './Pages/EventsPage'
 import EventPage from './Pages/EventPage'
-import NavBar from './Components/NavBar'
 
 function App() {
 
