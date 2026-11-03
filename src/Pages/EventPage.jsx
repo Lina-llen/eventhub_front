@@ -1,27 +1,26 @@
-import { useEffect } from 'react';
-import eventServices from '../Services/eventServices';
+import { useParams } from "react-router";
+import eventServices from "../Services/eventServices";
 
 const EventPage = () => {
+    const { id } = useParams();
 
-    const fetchEvents = async () => {
-
+    const fetchEventById = async () => {
         try {
-            const events = await eventServices.getAll();
-            console.log(events)
+            const response = await eventServices.getById(id);
+            console.log(response);
         } catch (error) {
             console.error(error);
         }
-    }  
+    }
 
     useEffect(() => {
-        fetchEvents();
-    },[])
+        fetchEventById();
+}, [id])
 
-
-    return <>
-        <h1>Page des événements</h1>
-
-    </>;
+return <>
+    <h1>Page de détails des événements</h1>
+    <h2> {id} </h2>
+</>;
 }
- 
+
 export default EventPage;
