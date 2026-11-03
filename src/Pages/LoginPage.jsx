@@ -23,10 +23,8 @@ const LoginPage = () => {
 
         try {
             const response = await authServices.login(user);
-            const token = typeof response.data === 'string'
-                ? response.data
-                : response.data?.token;
-
+            const token = response.data;
+            window.localStorage.setItem("token", token)
             if (token) {
                 console.log('Token:', token);
                 // MESSAGE DE SUCCÈS : affiché après une connexion réussie.

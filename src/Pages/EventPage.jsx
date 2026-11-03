@@ -6,7 +6,7 @@ const EventPage = () => {
     const fetchEvents = async () => {
 
         try {
-            const events = eventServices.getAll();
+            const events = await eventServices.getAll();
             console.log(events)
         } catch (error) {
             console.error(error);
