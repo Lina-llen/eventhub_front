@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import { Link } from 'react-router';
+import { useContext, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import authServices from '../Services/authServices';
+import AuthContext from '../Contexts/AuthContext';
 
 const LoginPage = () => {
+    const navigate = useNavigate();
+    const { setIsConnected } = useContext(AuthContext);
     const [user, setUser] = useState({
         email: "",
         password: ""
@@ -23,15 +26,16 @@ const LoginPage = () => {
 
         try {
             const response = await authServices.login(user);
-            const token = response.data;
-            window.localStorage.setItem("token", token)
+            const token = response.data.token;
             if (token) {
-                console.log('Token:', token);
+                window.localStorage.setItem("token", token);
+                setIsConnected(true);
                 // MESSAGE DE SUCCÈS : affiché après une connexion réussie.
                 setMessage({
                     type: "success",
                     text: "Connexion réussie."
                 });
+                navigate('/profile');
             } else {
                 console.error('Aucun token trouvé dans la réponse de connexion :', response.data);
                 // MESSAGE SANS TOKEN : indique que le back n'a pas renvoyé le token attendu.
