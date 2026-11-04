@@ -7,6 +7,7 @@ const EventPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [event, setEvent] = useState({});
+    const [participationMessage, setParticipationMessage] = useState(null);
 
     const fetchEventById = async () => {
         try {
@@ -24,12 +25,23 @@ const EventPage = () => {
 
 
     const particip = async () => {
+        setParticipationMessage(null);
         try {
             const response = await participantServices.insert(id);
             console.log("Participation réussie :", response.data);
+            setParticipationMessage({
+                type: "success",
+                text: "Tu es bien inscrit à cet événement."
+            });
             await fetchEventById();
         } catch (error) {
             console.error(error);
+            if (error.response?.status === 409) {
+                setParticipationMessage({
+                    type: "warning",
+                    text: "Tu es déjà inscrit à cet événement."
+                });
+            }
         }
     };
 
@@ -114,7 +126,14 @@ const EventPage = () => {
                         )}
                     </div>
                 )}
-                <button type="button" className="btn btn-primary" onClick={particip}>Je participe</button>
+                <div className="text-center mt-4">
+                    {participationMessage && (
+                        <div className={`alert alert-${participationMessage.type}`} role="alert">
+                            {participationMessage.text}
+                        </div>
+                    )}
+                    <button type="button" className="btn btn-primary px-4" onClick={particip}>Je participe</button>
+                </div>
             </article>
         </main>
     );

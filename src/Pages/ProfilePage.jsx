@@ -9,19 +9,43 @@ const ProfilePage = () => {
         new_password : "",
         confirm_password : "",
     });
+    const [passwordMessage, setPasswordMessage] = useState(null);
 
     const handleChange = (e) => {
         const {name,value} = e.target;
-        setChangePassword({...changePassword, [name] : value})
+        setChangePassword({...changePassword, [name] : value});
+        setPasswordMessage(null);
     }
 
     const handleSubmit = async (e) => {
-        e.preventDefault()
-        try{
+        e.preventDefault();
+        setPasswordMessage(null);
+        if (changePassword.new_password !== changePassword.confirm_password) {
+            setPasswordMessage({
+                type: "danger",
+                text: "Les mots de passe ne correspondent pas."
+            });
+            return;
+        }
+
+        try {
             const response = await userServices.resetPassword(changePassword);
             console.log(response);
-        }catch (error) {
+            setPasswordMessage({
+                type: "success",
+                text: "Votre mot de passe a bien été modifié."
+            });
+            setChangePassword({
+                old_password: "",
+                new_password: "",
+                confirm_password: "",
+            });
+        } catch (error) {
             console.error(error);
+            setPasswordMessage({
+                type: "danger",
+                text: error.response?.data?.error || "Le changement de mot de passe a échoué. Vérifie ton ancien mot de passe."
+            });
         }
     }
 
@@ -167,6 +191,11 @@ return (
 
                 {showPasswordForm && (
                     <form id="change-password-form" className="mt-4 pt-4 border-top" onSubmit={handleSubmit}>
+                        {passwordMessage && (
+                            <div className={`alert alert-${passwordMessage.type}`} role="alert">
+                                {passwordMessage.text}
+                            </div>
+                        )}
                         <div className="mb-3">
                             <label htmlFor="old_password" className="form-label">Ancien mot de passe</label>
                             <input
