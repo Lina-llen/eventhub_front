@@ -1,6 +1,7 @@
 import { useContext } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router';
 import AuthContext from '../Contexts/AuthContext';
+import axios from 'axios';
 
 const NavBar = () => {
     const navigate = useNavigate();
@@ -8,6 +9,7 @@ const NavBar = () => {
 
     const handleLogout = () => {
         window.localStorage.removeItem('token');
+        axios.defaults.headers["Authorization"] = "Bearer 0";
         setIsConnected(false);
         navigate('/');
     };

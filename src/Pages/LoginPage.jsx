@@ -2,6 +2,7 @@ import { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import authServices from '../Services/authServices';
 import AuthContext from '../Contexts/AuthContext';
+import axios from 'axios';
 
 const LoginPage = () => {
     const navigate = useNavigate();
@@ -29,6 +30,7 @@ const LoginPage = () => {
             const token = response.data.token;
             if (token) {
                 window.localStorage.setItem("token", token);
+                axios.defaults.headers.common.Authorization = "Bearer " + token;
                 setIsConnected(true);
                 // MESSAGE DE SUCCÈS : affiché après une connexion réussie.
                 setMessage({

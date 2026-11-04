@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router";
 import eventServices from "../Services/eventServices";
 import { useEffect, useState } from "react";
+import participantServices from "../Services/participantServices";
 
 const EventPage = () => {
     const { id } = useParams();
@@ -20,6 +21,17 @@ const EventPage = () => {
     useEffect(() => {
         fetchEventById();
     }, [id]);
+
+
+    const particip = async () => {
+        try {
+            const response = await participantServices.insert(id);
+            console.log("Participation réussie :", response.data);
+            await fetchEventById();
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     return (
         <main className="container py-5">
@@ -102,6 +114,7 @@ const EventPage = () => {
                         )}
                     </div>
                 )}
+                <button type="button" className="btn btn-primary" onClick={particip}>Je participe</button>
             </article>
         </main>
     );
