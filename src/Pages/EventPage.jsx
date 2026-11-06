@@ -2,33 +2,85 @@ import { useNavigate, useParams } from "react-router";
 import eventServices from "../Services/eventServices";
 import { useEffect, useState } from "react";
 import participantServices from "../Services/participantServices";
+import userServices from "../Services/userServices";
+import commentsServices from "../Services/commentsServices";
+
+const isUserParticipating = (participants, user) => Boolean(
+    user?.us_id &&
+    participants?.some(
+        (participant) =>
+            String(participant.us_id ?? participant.pa_user) === String(user.us_id)
+    )
+);
 
 const EventPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [event, setEvent] = useState({});
+    const [loadedEventId, setLoadedEventId] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [isParticipating, setIsParticipating] = useState(false);
     const [participationMessage, setParticipationMessage] = useState(null);
+    const [isParticipationPending, setIsParticipationPending] = useState(false);
+    const [comment, setComment] = useState("");
+    const [commentMessage, setCommentMessage] = useState(null);
+    const [isCommentPending, setIsCommentPending] = useState(false);
 
-    const fetchEventById = async () => {
+    const fetchEventById = async (user = currentUser) => {
         try {
             const response = await eventServices.getById(id);
             console.log("Événement reçu :", response.data);
             setEvent(response.data);
+            setLoadedEventId(id);
+            setIsParticipating(isUserParticipating(response.data.participants, user));
         } catch (error) {
             console.error(error);
         }
     };
 
     useEffect(() => {
-        fetchEventById();
+        let isCurrentRequest = true;
+
+        userServices.getMe()
+            .then((response) => {
+                if (!isCurrentRequest) {
+                    return;
+                }
+
+                const user = response.data;
+                setCurrentUser(user);
+                return eventServices.getById(id).then((eventResponse) => {
+                    if (isCurrentRequest) {
+                        console.log("Événement reçu :", eventResponse.data);
+                        setEvent(eventResponse.data);
+                        setLoadedEventId(id);
+                        setIsParticipating(
+                            isUserParticipating(eventResponse.data.participants, user)
+                        );
+                    }
+                });
+            })
+            .catch((error) => {
+                if (isCurrentRequest) {
+                    console.error(error);
+                    setParticipationMessage({
+                        type: "danger",
+                        text: "Impossible de vérifier ton inscription. Réessaie plus tard."
+                    });
+                }
+            });
+
+        return () => {
+            isCurrentRequest = false;
+        };
     }, [id]);
 
-
-    const particip = async () => {
+    const handleParticip = async () => {
         setParticipationMessage(null);
+        setIsParticipationPending(true);
         try {
-            const response = await participantServices.insert(id);
-            console.log("Participation réussie :", response.data);
+            await participantServices.insert(id);
+            setIsParticipating(true);
             setParticipationMessage({
                 type: "success",
                 text: "Tu es bien inscrit à cet événement."
@@ -37,14 +89,83 @@ const EventPage = () => {
         } catch (error) {
             console.error(error);
             if (error.response?.status === 409) {
+                await fetchEventById();
+                setIsParticipating(true);
+            } else {
                 setParticipationMessage({
-                    type: "warning",
-                    text: "Tu es déjà inscrit à cet événement."
+                    type: "danger",
+                    text: error.response?.data?.message ||
+                        error.response?.data?.error ||
+                        error.message ||
+                        "L'inscription a échoué. Réessaie."
                 });
             }
+        } finally {
+            setIsParticipationPending(false);
         }
     };
 
+    const handleUnparticip = async () => {
+        setParticipationMessage(null);
+        setIsParticipationPending(true);
+        try {
+            await participantServices.deleteP(currentUser.us_id, id);
+            setIsParticipating(false);
+            setParticipationMessage({
+                type: "success",
+                text: "Tu es bien désinscrit de cet événement."
+            });
+            await fetchEventById();
+        } catch (error) {
+            console.error(error);
+            setParticipationMessage({
+                type: "danger",
+                text: error.response?.data?.message ||
+                    error.response?.data?.error ||
+                    error.message ||
+                    "La désinscription a échoué. Réessaie."
+            });
+        } finally {
+            setIsParticipationPending(false);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setCommentMessage(null);
+
+        if (!comment.trim()) {
+            setCommentMessage({
+                type: "warning",
+                text: "Le commentaire ne peut pas être vide."
+            });
+            return;
+        }
+
+        setIsCommentPending(true);
+        try {
+            await commentsServices.insert({
+                comment: comment.trim(),
+                event: id
+            });
+            setComment("");
+            setCommentMessage({
+                type: "success",
+                text: "Ton commentaire a bien été ajouté."
+            });
+            await fetchEventById();
+        } catch (error) {
+            console.error(error);
+            setCommentMessage({
+                type: "danger",
+                text: error.response?.data?.message ||
+                    error.response?.data?.error ||
+                    "L'ajout du commentaire a échoué. Réessaie."
+            });
+        } finally {
+            setIsCommentPending(false);
+        }
+    }
     return (
         <main className="container py-5">
             <button 
@@ -56,7 +177,46 @@ const EventPage = () => {
             </button>
 
             <article className="card border-0 shadow-sm p-4 p-md-5">
-                <h1 className="h2 fw-bold mb-3">{event.ev_title}</h1>
+                <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                    <h1 className="h2 fw-bold mb-0">{event.ev_title}</h1>
+                    <div className="text-end">
+                        {isParticipating ? (
+                            <button
+                                type="button"
+                                className="btn btn-outline-danger px-4"
+                                onClick={handleUnparticip}
+                                disabled={isParticipationPending || loadedEventId !== id}
+                            >
+                                {isParticipationPending ? "Mise à jour..." : "Se désinscrire"}
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className="btn btn-primary px-4"
+                                onClick={handleParticip}
+                                disabled={isParticipationPending || !currentUser || loadedEventId !== id}
+                            >
+                                {isParticipationPending ? "Mise à jour..." : "Je participe"}
+                            </button>
+                        )}
+                        {participationMessage && (
+                            <div
+                                className={`alert alert-${participationMessage.type} d-flex align-items-center gap-2 text-start rounded-3 shadow-sm mt-2 mb-0`}
+                                role="alert"
+                            >
+                                <i
+                                    className={`bi ${
+                                        participationMessage.type === "success"
+                                            ? "bi-check-circle-fill"
+                                            : "bi-exclamation-triangle-fill"
+                                    }`}
+                                    aria-hidden="true"
+                                />
+                                {participationMessage.text}
+                            </div>
+                        )}
+                    </div>
+                </div>
 
                 <div className="d-flex flex-wrap align-items-center gap-3 text-muted mb-4 pb-3 border-bottom">
                     <span>
@@ -126,14 +286,48 @@ const EventPage = () => {
                         )}
                     </div>
                 )}
-                <div className="text-center mt-4">
-                    {participationMessage && (
-                        <div className={`alert alert-${participationMessage.type}`} role="alert">
-                            {participationMessage.text}
+
+                <form className="mt-5 pt-4 border-top" onSubmit={handleSubmit}>
+                    <label htmlFor="comment" className="form-label fw-bold">
+                        Ajouter un commentaire
+                    </label>
+                    <textarea
+                        id="comment"
+                        name="comment"
+                        className="form-control mb-3"
+                        rows="4"
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        placeholder="Écris ton commentaire..."
+                        required
+                    />
+                    {commentMessage && (
+                        <div
+                            className={`alert alert-${commentMessage.type} d-flex align-items-center gap-2 rounded-3 shadow-sm`}
+                            role="alert"
+                            aria-live="polite"
+                        >
+                            <i
+                                className={`bi ${
+                                    commentMessage.type === "success"
+                                        ? "bi-check-circle-fill"
+                                        : commentMessage.type === "warning"
+                                            ? "bi-exclamation-circle-fill"
+                                            : "bi-exclamation-triangle-fill"
+                                }`}
+                                aria-hidden="true"
+                            />
+                            <span>{commentMessage.text}</span>
                         </div>
                     )}
-                    <button type="button" className="btn btn-primary px-4" onClick={particip}>Je participe</button>
-                </div>
+                    <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={isCommentPending}
+                    >
+                        {isCommentPending ? "Envoi..." : "Envoyer le commentaire"}
+                    </button>
+                </form>
             </article>
         </main>
     );

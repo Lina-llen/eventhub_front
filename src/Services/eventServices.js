@@ -9,7 +9,12 @@ function getById(id) {
     return axios.get(API_URL + "event/" + id);
 }
 
+function insert(event) {
+    return axios.post(API_URL + "event", event);
+}
+
 export default {
     getAll,
-    getById
+    getById,
+    insert
 }

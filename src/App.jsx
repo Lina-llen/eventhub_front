@@ -9,6 +9,7 @@ import LoginPage from './Pages/LoginPage'
 import RegisterPage from './Pages/RegisterPage'
 import EventsPage from './Pages/EventsPage'
 import EventPage from './Pages/EventPage'
+import EventCreatePage from './Pages/EventCreatePage'
 import ProfilePage from './Pages/ProfilePage'
 import authService from './Services/authServices'
 import AuthWrapper from './Wrappers/AuthWrapper'
@@ -30,6 +31,7 @@ function App() {
           <Route path='/login' element={<LoginPage />} />
           <Route path='/register' element={<RegisterPage />} />
           <Route path='/events' element={<AuthWrapper> <EventsPage /> </AuthWrapper>} />
+          <Route path='/events/create' element={<AuthWrapper> <EventCreatePage /> </AuthWrapper>} />
           <Route path='/event/:id' element={<AuthWrapper> <EventPage /> </AuthWrapper>} />
           <Route path='/profile' element={<AuthWrapper> <ProfilePage /> </AuthWrapper>} />
         </Routes>
