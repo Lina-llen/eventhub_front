@@ -269,7 +269,6 @@ const EventPage = () => {
                             <ul className="list-unstyled d-flex flex-column gap-3 mb-0">
                                 {event.comments.map((comment, index) => (
                                     <li 
-                                        key={comment.co_id || index}
                                         className="bg-light rounded-3 p-3 border"
                                     >
                                         {comment.us_username && (

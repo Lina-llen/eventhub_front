@@ -113,6 +113,9 @@ const LoginPage = () => {
                             Se connecter
                         </button>
                     </form>
+                    <p className="text-center mb-0 mt-3">
+                        <Link to="/forgot-password">Mot de passe oublié ?</Link>
+                    </p>
                     <p className="text-center mb-0 mt-4">
                         Pas encore inscrit ? <Link to="/register">S'inscrire</Link>
                     </p>

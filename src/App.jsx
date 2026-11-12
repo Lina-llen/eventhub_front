@@ -11,6 +11,8 @@ import EventsPage from './Pages/EventsPage'
 import EventPage from './Pages/EventPage'
 import EventCreatePage from './Pages/EventCreatePage'
 import ProfilePage from './Pages/ProfilePage'
+import ForgotPasswordPage from './Pages/ForgotPasswordPage'
+import ResetPasswordPage from './Pages/ResetPasswordPage'
 import authService from './Services/authServices'
 import AuthWrapper from './Wrappers/AuthWrapper'
 
@@ -30,6 +32,8 @@ function App() {
           <Route path='/' element={<HomePage />} />
           <Route path='/login' element={<LoginPage />} />
           <Route path='/register' element={<RegisterPage />} />
+          <Route path='/forgot-password' element={<ForgotPasswordPage />} />
+          <Route path='/reset-password' element={<ResetPasswordPage />} />
           <Route path='/events' element={<AuthWrapper> <EventsPage /> </AuthWrapper>} />
           <Route path='/events/create' element={<AuthWrapper> <EventCreatePage /> </AuthWrapper>} />
           <Route path='/event/:id' element={<AuthWrapper> <EventPage /> </AuthWrapper>} />

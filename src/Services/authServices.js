@@ -11,6 +11,14 @@ function register(user){
     return axios.post(API_URL + "auth/register", user)
 }
 
+function forgotPassword(email){
+    return axios.post(API_URL + "auth/forgot-password", { email })
+}
+
+function resetPassword(resetToken, newPassword){
+    return axios.post(API_URL + "auth/reset-password", { resetToken, newPassword })
+}
+
 function isConnected(){
     const token = window.localStorage.getItem("token");
     if(token){
@@ -29,5 +37,7 @@ function isConnected(){
 export default {
     login,
     register,
+    forgotPassword,
+    resetPassword,
     isConnected
 };

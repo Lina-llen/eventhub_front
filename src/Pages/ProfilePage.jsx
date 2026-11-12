@@ -1,15 +1,70 @@
 import {useEffect, useState} from "react";
+import Modal from "react-bootstrap/Modal";
+import "@fullcalendar/react/skeleton.css";
+import "@fullcalendar/react/themes/monarch/theme.css";
+import "@fullcalendar/react/themes/monarch/palettes/purple.css";
+import FullCalendar from "@fullcalendar/react";
+import themePlugin from "@fullcalendar/react/themes/monarch";
+import dayGridPlugin from "@fullcalendar/react/daygrid";
+import interactionPlugin from "@fullcalendar/react/interaction";
+import frLocale from "@fullcalendar/react/locales/fr";
+import { useNavigate } from "react-router";
 import userServices from "../Services/userServices";
 
 const ProfilePage = () => {
+    const navigate = useNavigate();
     const [user,setUser] = useState({});
-    const [showPasswordForm, setShowPasswordForm] = useState(false);
+    const [showProfileActions, setShowProfileActions] = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
+    const [profile, setProfile] = useState({ username: "", email: "" });
+    const [profileField, setProfileField] = useState("username");
+    const [profileMessage, setProfileMessage] = useState(null);
+    const [isProfilePending, setIsProfilePending] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [changePassword, setChangePassword] = useState({
         old_password : "",
         new_password : "",
         confirm_password : "",
     });
     const [passwordMessage, setPasswordMessage] = useState(null);
+
+    const handleProfileChange = (e) => {
+        const {name, value} = e.target;
+        setProfile({...profile, [name]: value});
+        setProfileMessage(null);
+    }
+
+    const openProfileModal = (field) => {
+        setProfile({
+            username: user.us_username || "",
+            email: user.us_email || ""
+        });
+        setProfileField(field);
+        setProfileMessage(null);
+        setShowProfileModal(true);
+    }
+
+    const handleProfileSubmit = async (e) => {
+        e.preventDefault();
+        setProfileMessage(null);
+        setIsProfilePending(true);
+
+        try {
+            const updatedValue = profile[profileField].trim();
+            await userServices.updateMe({[profileField]: updatedValue});
+            const userField = profileField === "username" ? "us_username" : "us_email";
+            setUser({...user, [userField]: updatedValue});
+            setShowProfileModal(false);
+        } catch (error) {
+            console.error(error);
+            setProfileMessage({
+                type: "danger",
+                text: error.response?.data?.message || error.response?.data?.error || "La modification du profil a échoué."
+            });
+        } finally {
+            setIsProfilePending(false);
+        }
+    }
 
     const handleChange = (e) => {
         const {name,value} = e.target;
@@ -65,6 +120,18 @@ const ProfilePage = () => {
 const comments = user.comments || [];
 const participations = user.participations || [];
 const events = user.events || [];
+const calendarEvents = participations
+    .filter((event) => event.ev_date)
+    .map((event) => ({
+        id: String(event.pa_event),
+        title: event.ev_title,
+        start: String(event.ev_date).slice(0, 10),
+        allDay: true,
+        extendedProps: {
+            location: event.ev_location,
+            description: event.ev_description
+        }
+    }));
 
 return (
     <main className="container py-4 py-md-5">
@@ -90,6 +157,47 @@ return (
                 </div>
 
                 <div className="d-flex flex-wrap gap-2 mt-4">
+                    <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => setShowProfileActions(!showProfileActions)}
+                        aria-expanded={showProfileActions}
+                        aria-controls="profile-actions"
+                    >
+                        {showProfileActions ? "Fermer les options" : "Modifier mon profil"}
+                    </button>
+                </div>
+
+                {showProfileActions && (
+                    <div id="profile-actions" className="d-flex flex-wrap gap-2 mt-3">
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary"
+                            onClick={() => openProfileModal("username")}
+                        >
+                            Modifier mon pseudo
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary"
+                            onClick={() => openProfileModal("email")}
+                        >
+                            Modifier mon e-mail
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary"
+                            onClick={() => {
+                                setPasswordMessage(null);
+                                setShowPasswordModal(true);
+                            }}
+                        >
+                            Modifier mon mot de passe
+                        </button>
+                    </div>
+                )}
+
+                <div className="d-flex flex-wrap gap-2 mt-4">
                     <span className="badge rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-2">
                         {comments.length} commentaire{comments.length === 1 ? "" : "s"}
                     </span>
@@ -102,6 +210,152 @@ return (
                 </div>
             </div>
         </section>
+
+        <section className="card border-0 shadow-sm mb-4">
+            <div className="card-body p-4">
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <h2 className="h5 fw-bold mb-1">Mon calendrier</h2>
+                        <p className="text-secondary mb-0">
+                            Retrouvez les événements auxquels vous êtes inscrit.
+                        </p>
+                    </div>
+                    <span className="badge rounded-pill bg-success">{calendarEvents.length}</span>
+                </div>
+                {calendarEvents.length > 0 ? (
+                    <FullCalendar
+                        plugins={[themePlugin, dayGridPlugin, interactionPlugin]}
+                        initialView="dayGridMonth"
+                        locale={frLocale}
+                        events={calendarEvents}
+                        eventClick={({ event }) => navigate(`/event/${event.id}`)}
+                        height="auto"
+                        headerToolbar={{
+                            left: "prev,next today",
+                            center: "title",
+                            right: ""
+                        }}
+                        dayMaxEvents
+                    />
+                ) : (
+                    <p className="text-secondary mb-0">
+                        Vous n'êtes inscrit à aucun événement avec une date pour le moment.
+                    </p>
+                )}
+            </div>
+        </section>
+
+        <Modal show={showProfileModal} onHide={() => setShowProfileModal(false)} centered>
+            <Modal.Header closeButton>
+                <Modal.Title>
+                    {profileField === "username" ? "Modifier mon pseudo" : "Modifier mon e-mail"}
+                </Modal.Title>
+            </Modal.Header>
+            <form onSubmit={handleProfileSubmit}>
+                <Modal.Body>
+                    {profileMessage && (
+                        <div className={`alert alert-${profileMessage.type}`} role="alert">
+                            {profileMessage.text}
+                        </div>
+                    )}
+                    <div>
+                        <label htmlFor={`profile${profileField}`} className="form-label">
+                            {profileField === "username" ? "Nouveau pseudo" : "Nouvelle adresse e-mail"}
+                        </label>
+                        <input
+                            type={profileField === "email" ? "email" : "text"}
+                            id={`profile${profileField}`}
+                            name={profileField}
+                            className="form-control"
+                            autoComplete={profileField}
+                            value={profile[profileField]}
+                            onChange={handleProfileChange}
+                            required
+                            disabled={isProfilePending}
+                        />
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowProfileModal(false)}
+                        disabled={isProfilePending}
+                    >
+                        Annuler
+                    </button>
+                    <button type="submit" className="btn btn-primary" disabled={isProfilePending}>
+                        {isProfilePending ? "Enregistrement..." : "Enregistrer"}
+                    </button>
+                </Modal.Footer>
+            </form>
+        </Modal>
+
+        <Modal show={showPasswordModal} onHide={() => setShowPasswordModal(false)} centered>
+            <Modal.Header closeButton>
+                <Modal.Title>Modifier mon mot de passe</Modal.Title>
+            </Modal.Header>
+            <form id="change-password-form" onSubmit={handleSubmit}>
+                <Modal.Body>
+                    {passwordMessage && (
+                        <div className={`alert alert-${passwordMessage.type}`} role="alert">
+                            {passwordMessage.text}
+                        </div>
+                    )}
+                    <div className="mb-3">
+                        <label htmlFor="old_password" className="form-label">Ancien mot de passe</label>
+                        <input
+                            type="password"
+                            className="form-control"
+                            name="old_password"
+                            id="old_password"
+                            autoComplete="current-password"
+                            onChange={handleChange}
+                            value={changePassword.old_password}
+                            required
+                        />
+                    </div>
+                    <div className="mb-3">
+                        <label htmlFor="new_password" className="form-label">Nouveau mot de passe</label>
+                        <input
+                            type="password"
+                            className="form-control"
+                            name="new_password"
+                            id="new_password"
+                            autoComplete="new-password"
+                            onChange={handleChange}
+                            value={changePassword.new_password}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="confirm_password" className="form-label">Confirmer le mot de passe</label>
+                        <input
+                            type="password"
+                            className="form-control"
+                            name="confirm_password"
+                            id="confirm_password"
+                            autoComplete="new-password"
+                            onChange={handleChange}
+                            value={changePassword.confirm_password}
+                            required
+                        />
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowPasswordModal(false)}
+                    >
+                        Annuler
+                    </button>
+                    <button type="submit" className="btn btn-primary">
+                        Changer le mot de passe
+                    </button>
+                </Modal.Footer>
+            </form>
+        </Modal>
 
         <div className="row g-4">
             <div className="col-12 col-lg-6">
@@ -171,74 +425,6 @@ return (
             </div>
         </div>
 
-        <section className="card border-0 shadow-sm mt-4">
-            <div className="card-body p-4">
-                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
-                    <div>
-                        <h2 className="h5 fw-bold mb-1">Sécurité</h2>
-                        <p className="text-secondary mb-0">Modifiez le mot de passe de votre compte.</p>
-                    </div>
-                    <button
-                        type="button"
-                        className="btn btn-outline-primary"
-                        onClick={() => setShowPasswordForm(!showPasswordForm)}
-                        aria-expanded={showPasswordForm}
-                        aria-controls="change-password-form"
-                    >
-                        {showPasswordForm ? "Annuler" : "Modifier mon mot de passe"}
-                    </button>
-                </div>
-
-                {showPasswordForm && (
-                    <form id="change-password-form" className="mt-4 pt-4 border-top" onSubmit={handleSubmit}>
-                        {passwordMessage && (
-                            <div className={`alert alert-${passwordMessage.type}`} role="alert">
-                                {passwordMessage.text}
-                            </div>
-                        )}
-                        <div className="mb-3">
-                            <label htmlFor="old_password" className="form-label">Ancien mot de passe</label>
-                            <input
-                                type="password"
-                                className="form-control"
-                                name="old_password"
-                                id="old_password"
-                                autoComplete="current-password"
-                                onChange={handleChange}
-                                value={changePassword.old_password}
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <label htmlFor="new_password" className="form-label">Nouveau mot de passe</label>
-                            <input
-                                type="password"
-                                className="form-control"
-                                name="new_password"
-                                id="new_password"
-                                autoComplete="new-password"
-                                onChange={handleChange}
-                                value={changePassword.new_password}
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <label htmlFor="confirm_password" className="form-label">Confirmer le mot de passe</label>
-                            <input
-                                type="password"
-                                className="form-control"
-                                name="confirm_password"
-                                id="confirm_password"
-                                autoComplete="new-password"
-                                onChange={handleChange}
-                                value={changePassword.confirm_password}
-                            />
-                        </div>
-                        <button type="submit" className="btn btn-primary">
-                            Changer le mot de passe
-                        </button>
-                    </form>
-                )}
-            </div>
-        </section>
     </main>
 );
 };
